@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AppNav } from './components/AppNav';
+import { UpdateBanner } from './components/UpdateBanner';
 import { HintPanel } from './components/HintPanel';
 import { NonogramBoard, type Tool } from './components/NonogramBoard';
 import { type Cell, EMPTY, FILLED, UNKNOWN, lineSatisfied } from './nonogram/line';
@@ -295,6 +296,7 @@ export default function App() {
   return (
     <div className="app">
       <AppNav current="nonogram" />
+      <UpdateBanner />
       <header className="app-header">
         <h1>노노그램 도우미</h1>
         <span className="phase-badge">{isSetup ? '문제 입력' : '푸는 중'}</span>

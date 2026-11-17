@@ -16,6 +16,7 @@
   3. 칸과 이유. `판에 적용`으로 반영한다.
 - **오류 점검**: 힌트는 먼저 잘못 칠한 칸이나 단서와 맞지 않는 줄을 알려준다.
 - 진행 상태는 브라우저에 자동 저장된다.
+- 새 버전이 배포되면 화면 아래에 새로고침 안내가 뜬다. `새로고침`을 누르면 진행 상태를 유지한 채 새 버전으로 바뀐다.
 
 ### 힌트 순서
 
@@ -56,4 +57,5 @@ main에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트·
 - `src/photo/digits.ts`: 기기 글꼴로 만든 0~9 견본과 비교해 단서 숫자 읽기
 - `src/photo/recognize.ts`: 사진 읽기 흐름
 - `src/components/AppNav.tsx`: 스도쿠·노노그램 도우미 이동 메뉴 (SudokuHelper에도 같은 파일)
+- `src/components/UpdateBanner.tsx`: 새 버전 새로고침 안내 (두 앱에 같은 파일)
 - `src/App.tsx`, `src/components/`: 화면
