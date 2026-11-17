@@ -40,7 +40,8 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
   const w = puzzle.cols.length;
   const h = puzzle.rows.length;
   const size = useCellSize(puzzle);
-  const stroke = useRef<{ value: Cell; seen: Set<number> } | null>(null);
+  /** 진행 중인 획. axis는 Shift로 직선을 그릴 때 정해진 방향 */
+  const stroke = useRef<{ value: Cell; seen: Set<number>; start: number; axis: 'row' | 'col' | null } | null>(null);
 
   const focus = new Set(hint && hintLevel >= 1 && hint.line ? lineIndices(puzzle, hint.line) : []);
   const preview = new Map<number, Cell>(hint && hintLevel >= 3 ? hint.changes.map((c) => [c.cell, c.value]) : []);
@@ -61,7 +62,7 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
     const useTool: Tool = e.button === 2 ? 'cross' : tool;
     const target = useTool === 'fill' ? FILLED : EMPTY;
     const value: Cell = grid[i] === target ? UNKNOWN : target;
-    stroke.current = { value, seen: new Set([i]) };
+    stroke.current = { value, seen: new Set([i]), start: i, axis: null };
     onCursor(i);
     onPaint([i], value, true);
   };
@@ -70,9 +71,29 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
     const s = stroke.current;
     if (!s) return;
     const i = cellAt(e.clientX, e.clientY);
-    if (i === null || s.seen.has(i)) return;
-    s.seen.add(i);
-    onPaint([i], s.value, false);
+    if (i === null) return;
+    if (!e.shiftKey) {
+      if (s.seen.has(i)) return;
+      s.seen.add(i);
+      onPaint([i], s.value, false);
+      return;
+    }
+    // Shift: 시작 칸의 행이나 열로만 그린다. 방향은 처음 더 많이 움직인 쪽으로 정한다
+    const r0 = Math.floor(s.start / w);
+    const c0 = s.start % w;
+    const r = Math.floor(i / w);
+    const c = i % w;
+    if (!s.axis) {
+      if (r === r0 && c === c0) return;
+      s.axis = Math.abs(c - c0) >= Math.abs(r - r0) ? 'row' : 'col';
+    }
+    const line: number[] = [];
+    if (s.axis === 'row') for (let k = Math.min(c0, c); k <= Math.max(c0, c); k++) line.push(r0 * w + k);
+    else for (let k = Math.min(r0, r); k <= Math.max(r0, r); k++) line.push(k * w + c0);
+    const fresh = line.filter((x) => !s.seen.has(x));
+    if (!fresh.length) return;
+    fresh.forEach((x) => s.seen.add(x));
+    onPaint(fresh, s.value, false);
   };
 
   useEffect(() => {
@@ -103,8 +124,7 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
         {puzzle.cols.map((clue, c) => (
           <div
             key={`c${c}`}
-            className={['nono-col-clue', colDone[c] ? 'done' : '', c === focusCol ? 'focus' : '', c === curC ? 'cursor-line' : '', c % 5 === 4 && c !== w - 1 ? 'edge-r' : ''].join(' ')}
-          >
+            className={['nono-col-clue', colDone[c] ? 'done' : '', c === focusCol ? 'focus' : '', c === curC ? 'cursor-line' : '', c % 5 === 4 && c !== w - 1 ? 'edge-r' : ''].join(' ')}          >
             {(clue.length ? clue : [0]).map((n, k) => (
               <span key={k}>{n}</span>
             ))}
@@ -113,8 +133,7 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
         {puzzle.rows.map((clue, r) => (
           <Fragment key={r}>
             <div
-              className={['nono-row-clue', rowDone[r] ? 'done' : '', r === focusRow ? 'focus' : '', r === curR ? 'cursor-line' : '', r % 5 === 4 && r !== h - 1 ? 'edge-b' : ''].join(' ')}
-            >
+              className={['nono-row-clue', rowDone[r] ? 'done' : '', r === focusRow ? 'focus' : '', r === curR ? 'cursor-line' : '', r % 5 === 4 && r !== h - 1 ? 'edge-b' : ''].join(' ')}            >
               {(clue.length ? clue : [0]).map((n, k) => (
                 <span key={k}>{n}</span>
               ))}

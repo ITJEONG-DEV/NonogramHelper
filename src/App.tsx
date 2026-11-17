@@ -36,8 +36,7 @@ type Action =
   | { type: 'move'; dr: number; dc: number }
   | { type: 'step'; delta: number }
   | { type: 'mark'; value: Cell }
-  | { type: 'tool'; tool: Tool }
-  | { type: 'undo' }
+  | { type: 'tool'; tool: Tool }  | { type: 'undo' }
   | { type: 'clearGrid' }
   | { type: 'hint' }
   | { type: 'hintApply' }
@@ -134,8 +133,7 @@ function reducer(state: State, action: Action): State {
       return commit(state, { ...game, grid });
     }
     case 'tool':
-      return { ...state, tool: action.tool };
-    case 'undo': {
+      return { ...state, tool: action.tool };    case 'undo': {
       const prev = state.history[state.history.length - 1];
       if (!prev) return state;
       return { ...state, game: prev, history: state.history.slice(0, -1), hint: null, hintLevel: 0, message: null };
@@ -302,8 +300,7 @@ export default function App() {
             hint={hint}
             hintLevel={hintLevel}
             onPaint={(cells, value, first) => dispatch({ type: 'paint', cells, value, first })}
-            onCursor={(cell) => dispatch({ type: 'cursor', cell })}
-          />
+            onCursor={(cell) => dispatch({ type: 'cursor', cell })}          />
 
           {hint && (
             <HintPanel
@@ -347,7 +344,7 @@ export default function App() {
           </div>
 
           <p className="keys">
-            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
+            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
           </p>
         </>
       )}
