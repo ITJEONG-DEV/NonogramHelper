@@ -477,6 +477,11 @@ a.app-nav-item:hover {
   border-bottom: 2px solid var(--line-strong);
 }
 
+.nono-col-clue,
+.nono-row-clue {
+  cursor: pointer;
+}
+
 .nono-col-clue.done,
 .nono-row-clue.done {
   color: var(--muted);

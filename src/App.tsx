@@ -3,7 +3,18 @@ import { AppNav } from './components/AppNav';
 import { HintPanel } from './components/HintPanel';
 import { NonogramBoard, type Tool } from './components/NonogramBoard';
 import { type Cell, EMPTY, FILLED, UNKNOWN, lineSatisfied } from './nonogram/line';
-import { type Puzzle, cluesFromSolution, formatClue, parseClues, solve, validatePuzzle } from './nonogram/puzzle';
+import {
+  type LineRef,
+  type Puzzle,
+  clueOf,
+  cluesFromSolution,
+  formatClue,
+  lineIndices,
+  lineName,
+  parseClues,
+  solve,
+  validatePuzzle,
+} from './nonogram/puzzle';
 import { applyHint, findHint, type Hint } from './nonogram/hints';
 
 type Phase = 'setup' | 'solve';
@@ -36,7 +47,9 @@ type Action =
   | { type: 'move'; dr: number; dc: number }
   | { type: 'step'; delta: number }
   | { type: 'mark'; value: Cell }
-  | { type: 'tool'; tool: Tool }  | { type: 'undo' }
+  | { type: 'tool'; tool: Tool }
+  | { type: 'fillLine'; line: LineRef }
+  | { type: 'undo' }
   | { type: 'clearGrid' }
   | { type: 'hint' }
   | { type: 'hintApply' }
@@ -133,7 +146,21 @@ function reducer(state: State, action: Action): State {
       return commit(state, { ...game, grid });
     }
     case 'tool':
-      return { ...state, tool: action.tool };    case 'undo': {
+      return { ...state, tool: action.tool };
+    case 'fillLine': {
+      if (game.phase !== 'solve' || !game.puzzle) return state;
+      const idx = lineIndices(game.puzzle, action.line);
+      const cells = idx.map((i) => game.grid[i]);
+      const name = lineName(action.line);
+      if (!lineSatisfied(clueOf(game.puzzle, action.line), cells)) {
+        return { ...state, message: { tone: 'info', text: `${name}은 아직 단서만큼 칠하지 않았어요. 다 칠한 뒤에 누르면 남은 칸을 X로 채워요.` } };
+      }
+      if (!cells.includes(UNKNOWN)) return state;
+      const grid = game.grid.slice();
+      for (const i of idx) if (grid[i] === UNKNOWN) grid[i] = EMPTY;
+      return commit(state, { ...game, grid });
+    }
+    case 'undo': {
       const prev = state.history[state.history.length - 1];
       if (!prev) return state;
       return { ...state, game: prev, history: state.history.slice(0, -1), hint: null, hintLevel: 0, message: null };
@@ -300,7 +327,9 @@ export default function App() {
             hint={hint}
             hintLevel={hintLevel}
             onPaint={(cells, value, first) => dispatch({ type: 'paint', cells, value, first })}
-            onCursor={(cell) => dispatch({ type: 'cursor', cell })}          />
+            onCursor={(cell) => dispatch({ type: 'cursor', cell })}
+            onClue={(line) => dispatch({ type: 'fillLine', line })}
+          />
 
           {hint && (
             <HintPanel
@@ -344,7 +373,7 @@ export default function App() {
           </div>
 
           <p className="keys">
-            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
+            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 다 칠한 줄의 단서를 누르면 남은 칸이 X로 채워져요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
           </p>
         </>
       )}

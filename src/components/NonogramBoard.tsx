@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { type Cell, EMPTY, FILLED, UNKNOWN, lineSatisfied } from '../nonogram/line';
-import { type Puzzle, lineIndices } from '../nonogram/puzzle';
+import { type LineRef, type Puzzle, lineIndices } from '../nonogram/puzzle';
 import type { Hint } from '../nonogram/hints';
 
 export type Tool = 'fill' | 'cross';
@@ -15,6 +15,8 @@ interface Props {
   /** 한 번 누르고 끄는 동안의 칠하기. first가 true면 새 획 */
   onPaint: (cells: number[], value: Cell, first: boolean) => void;
   onCursor: (cell: number) => void;
+  /** 행·열 단서 머리칸을 눌렀을 때 */
+  onClue: (ref: LineRef) => void;
 }
 
 function useCellSize(puzzle: Puzzle) {
@@ -36,7 +38,7 @@ function useCellSize(puzzle: Puzzle) {
   return size;
 }
 
-export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onPaint, onCursor }: Props) {
+export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onPaint, onCursor, onClue }: Props) {
   const w = puzzle.cols.length;
   const h = puzzle.rows.length;
   const size = useCellSize(puzzle);
@@ -124,7 +126,11 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
         {puzzle.cols.map((clue, c) => (
           <div
             key={`c${c}`}
-            className={['nono-col-clue', colDone[c] ? 'done' : '', c === focusCol ? 'focus' : '', c === curC ? 'cursor-line' : '', c % 5 === 4 && c !== w - 1 ? 'edge-r' : ''].join(' ')}          >
+            className={['nono-col-clue', colDone[c] ? 'done' : '', c === focusCol ? 'focus' : '', c === curC ? 'cursor-line' : '', c % 5 === 4 && c !== w - 1 ? 'edge-r' : ''].join(' ')}
+            role="button"
+            title={colDone[c] ? '눌러서 남은 칸을 X로 채우기' : undefined}
+            onClick={() => onClue({ kind: 'col', index: c })}
+          >
             {(clue.length ? clue : [0]).map((n, k) => (
               <span key={k}>{n}</span>
             ))}
@@ -133,7 +139,11 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
         {puzzle.rows.map((clue, r) => (
           <Fragment key={r}>
             <div
-              className={['nono-row-clue', rowDone[r] ? 'done' : '', r === focusRow ? 'focus' : '', r === curR ? 'cursor-line' : '', r % 5 === 4 && r !== h - 1 ? 'edge-b' : ''].join(' ')}            >
+              className={['nono-row-clue', rowDone[r] ? 'done' : '', r === focusRow ? 'focus' : '', r === curR ? 'cursor-line' : '', r % 5 === 4 && r !== h - 1 ? 'edge-b' : ''].join(' ')}
+              role="button"
+              title={rowDone[r] ? '눌러서 남은 칸을 X로 채우기' : undefined}
+              onClick={() => onClue({ kind: 'row', index: r })}
+            >
               {(clue.length ? clue : [0]).map((n, k) => (
                 <span key={k}>{n}</span>
               ))}
