@@ -1,0 +1,55 @@
+# 노노그램 도우미
+
+노노그램 단서를 입력하면 다음 한 단계를 힌트로 알려주는 PWA. 브라우저에서 쓰거나 휴대폰 홈 화면에 앱으로 설치할 수 있고, 설치 후에는 오프라인에서도 동작한다.
+
+**사용하기**: https://itjeong-dev.github.io/NonogramHelper/ · 함께 쓰는 앱: [스도쿠 도우미](https://itjeong-dev.github.io/SudokuHelper/)
+
+## 기능
+
+- **단서 입력**: 가로 단서와 세로 단서를 한 줄에 하나씩 적는다. 숫자는 띄어 쓰고, 칠할 칸이 없는 줄은 `0`으로 적는다. 줄 수가 판의 크기가 된다(최대 40x40).
+- **답 확인**: 풀기 시작할 때 단서 합·줄 길이를 검사하고, 답이 하나인지 확인한다.
+- **칠하기·X 표시**: 칸을 누르거나 끌어서 여러 칸을 한 번에 칠한다. 마우스 오른쪽 버튼은 X. 단서를 다 채운 줄은 단서가 흐려진다.
+- **단계별 힌트**: 힌트를 누를 때마다 한 단계씩 더 알려준다.
+  1. 어디를 볼지 (줄 강조)
+  2. 무엇을 찾을지 (기법과 확정되는 칸 수)
+  3. 칸과 이유. `판에 적용`으로 반영한다.
+- **오류 점검**: 힌트는 먼저 잘못 칠한 칸이나 단서와 맞지 않는 줄을 알려준다.
+- 진행 상태는 브라우저에 자동 저장된다.
+
+### 힌트 순서
+
+잘못 표시한 칸 → 단서 0인 줄 → 다 칠한 줄의 나머지 X → 가장 많은 칸이 확정되는 줄(겹치기·줄 추론). 줄 하나로 더 정해지는 칸이 없으면 한 칸의 답을 알려준다.
+
+줄 추론은 단서에 맞는 모든 배치를 동적 계획으로 훑어, 늘 칠해지는 칸과 한 번도 칠해지지 않는 칸을 찾는다.
+
+## 키보드
+
+| 키 | 동작 |
+|---|---|
+| 방향키, Tab / Shift+Tab | 칸 이동 |
+| Space, F, Enter | 칠하기 / 지우기 |
+| X | X 표시 / 지우기 |
+| Backspace, Delete | 지우기 |
+| T | 칠하기/X 도구 전환 |
+| H | 힌트 |
+| Ctrl+Z | 되돌리기 |
+
+## 개발
+
+```bash
+npm install
+npm run dev       # 개발 서버
+npm test          # 풀이·힌트 엔진 테스트
+npm run build     # dist/에 PWA 빌드
+npm run icons     # public/icon-192.png, icon-512.png 다시 만들기
+```
+
+main에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트·빌드 후 GitHub Pages에 배포한다.
+
+## 구조
+
+- `src/nonogram/line.ts`: 한 줄 풀이 (가능한 배치 계산)
+- `src/nonogram/puzzle.ts`: 단서 읽기·검사, 줄 추론 반복, 백트래킹 풀이
+- `src/nonogram/hints.ts`: 힌트 엔진 (`findHint`, `applyHint`)
+- `src/components/AppNav.tsx`: 스도쿠·노노그램 도우미 이동 메뉴 (SudokuHelper에도 같은 파일)
+- `src/App.tsx`, `src/components/`: 화면
