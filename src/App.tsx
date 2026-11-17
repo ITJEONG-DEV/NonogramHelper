@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AppNav } from './components/AppNav';
 import { HintPanel } from './components/HintPanel';
 import { NonogramBoard, type Tool } from './components/NonogramBoard';
@@ -16,6 +16,8 @@ import {
   validatePuzzle,
 } from './nonogram/puzzle';
 import { applyHint, findHint, type Hint } from './nonogram/hints';
+import { PhotoImport } from './components/PhotoImport';
+import type { PhotoResult } from './photo/recognize';
 
 type Phase = 'setup' | 'solve';
 
@@ -26,6 +28,8 @@ interface Game {
   puzzle: Puzzle | null;
   grid: Cell[];
   solution: Cell[] | null;
+  /** 사진에서 읽은 판 상태. 풀기 시작할 때 크기가 맞으면 판에 넣는다 */
+  pendingGrid?: { cols: number; rows: number; states: Cell[] } | null;
 }
 
 interface State {
@@ -56,7 +60,8 @@ type Action =
   | { type: 'hintClose' }
   | { type: 'edit' }
   | { type: 'new' }
-  | { type: 'dismiss' };
+  | { type: 'dismiss' }
+  | { type: 'photo'; result: PhotoResult };
 
 const STORAGE_KEY = 'nonogram-helper:v1';
 
@@ -98,12 +103,15 @@ function reducer(state: State, action: Action): State {
       if (err) return { ...state, message: { tone: 'error', text: err } };
       const res = solve(puzzle, 2);
       if (res.count === 0) return { ...state, message: { tone: 'error', text: '이 단서로는 그림을 만들 수 없어요. 단서를 다시 확인해 주세요.' } };
+      const pg = game.pendingGrid;
+      const fits = pg && pg.cols === puzzle.cols.length && pg.rows === puzzle.rows.length;
       const next: Game = {
         ...game,
         phase: 'solve',
         puzzle,
-        grid: new Array<Cell>(puzzle.rows.length * puzzle.cols.length).fill(UNKNOWN),
+        grid: fits ? pg.states.slice() : new Array<Cell>(puzzle.rows.length * puzzle.cols.length).fill(UNKNOWN),
         solution: res.count === 1 ? res.solution : null,
+        pendingGrid: null,
       };
       const s = { ...commit(state, next), cursor: 0 };
       if (res.count > 1) return { ...s, message: { tone: 'info', text: '답이 여러 개인 문제예요. 잘못 칠한 칸 알려주기와 정답 공개 힌트는 쓸 수 없어요.' } };
@@ -187,6 +195,32 @@ function reducer(state: State, action: Action): State {
       return { ...commit(state, emptyGame()), cursor: null };
     case 'dismiss':
       return { ...state, message: null };
+    case 'photo': {
+      const { result } = action;
+      const parts: string[] = [];
+      const st = result.state;
+      const stateText = st
+        ? `칠한 칸 ${st.states.filter((v) => v === FILLED).length}개·X ${st.states.filter((v) => v === EMPTY).length}개를 읽었어요.${st.uncertain.length ? ` 애매한 칸 ${st.uncertain.length}개는 비워 뒀어요.` : ''}`
+        : '';
+      if (game.phase === 'solve') {
+        if (!st) return state;
+        return { ...commit(state, { ...game, grid: st.states }), message: { tone: 'info', text: `${stateText} 사진과 비교해 보세요. 되돌리기로 읽기 전 판으로 돌아갈 수 있어요.` } };
+      }
+      let next: Game = { ...game };
+      if (result.clues) {
+        const c = result.clues;
+        next = { ...next, rowsText: c.rows.map(formatClue).join('\n'), colsText: c.cols.map(formatClue).join('\n') };
+        parts.push(`단서 ${result.rows}행·${result.cols}열을 읽었어요.`);
+        if (c.uncertain.length) parts.push(`확인할 줄: ${c.uncertain.map(lineName).join(', ')}.`);
+      }
+      if (st) {
+        const cleaned = st.states.map((v, i) => (st.uncertain.includes(i) ? UNKNOWN : v));
+        next = { ...next, pendingGrid: { cols: result.cols, rows: result.rows, states: cleaned } };
+        parts.push(`${stateText} 풀기 시작하면 판에 들어가요.`);
+      }
+      parts.push('사진과 비교해 틀린 단서를 고친 뒤 풀기 시작을 누르세요.');
+      return { ...commit(state, next), message: { tone: 'info', text: parts.join(' ') } };
+    }
   }
 }
 
@@ -194,6 +228,9 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const { game, hint, hintLevel, message, tool } = state;
   const puzzle = game.puzzle;
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const pickPhoto = () => fileInput.current?.click();
 
   useEffect(() => {
     try {
@@ -223,6 +260,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT') return;
+      if (document.querySelector('.photo-sheet')) return;
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
         dispatch({ type: 'undo' });
         e.preventDefault();
@@ -303,6 +341,9 @@ export default function App() {
             </label>
           </div>
           <div className="toolbar">
+            <button type="button" onClick={pickPhoto}>
+              사진으로 입력
+            </button>
             <button type="button" onClick={() => dispatch({ type: 'example' })}>
               예제 불러오기
             </button>
@@ -358,6 +399,9 @@ export default function App() {
             <button type="button" onClick={() => dispatch({ type: 'clearGrid' })} disabled={!game.grid.some((v) => v !== UNKNOWN)}>
               판 비우기
             </button>
+            <button type="button" onClick={pickPhoto}>
+              사진으로 판 읽기
+            </button>
             <button type="button" className="primary" onClick={() => dispatch({ type: 'hint' })} disabled={solved}>
               {hint && hintLevel < 3 ? '다음 힌트' : '힌트'}
             </button>
@@ -376,6 +420,31 @@ export default function App() {
             칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 다 칠한 줄의 단서를 누르면 남은 칸이 X로 채워져요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
           </p>
         </>
+      )}
+
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) setPhotoFile(f);
+          e.target.value = '';
+        }}
+      />
+      {photoFile && (
+        <PhotoImport
+          file={photoFile}
+          mode={isSetup ? 'full' : 'state'}
+          fixedSize={!isSetup && puzzle ? { cols: puzzle.cols.length, rows: puzzle.rows.length } : undefined}
+          onDone={(result) => {
+            setPhotoFile(null);
+            dispatch({ type: 'photo', result });
+          }}
+          onCancel={() => setPhotoFile(null)}
+          onPickAgain={pickPhoto}
+        />
       )}
     </div>
   );
