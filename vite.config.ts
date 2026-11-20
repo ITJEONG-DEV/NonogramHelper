@@ -9,6 +9,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      // 퍼즐 도우미로 옮겨 옛 서비스 워커는 스스로 해제한다(설치한 앱도 다음에 열 때 새 주소로 넘어감)
+      selfDestroying: true,
       includeAssets: ['icon.svg'],
       manifest: {
         name: '노노그램 도우미',
