@@ -17,6 +17,7 @@ import {
   validatePuzzle,
 } from './nonogram/puzzle';
 import { applyHint, findHint, type Hint } from './nonogram/hints';
+import { LEVELS, SIZES, generate, levelLabel, type Generated, type Level, type Size } from './nonogram/generate';
 import { PhotoImport } from './components/PhotoImport';
 import type { PhotoResult } from './photo/recognize';
 
@@ -31,10 +32,19 @@ interface Game {
   solution: Cell[] | null;
   /** 사진에서 읽은 판 상태. 풀기 시작할 때 크기가 맞으면 판에 넣는다 */
   pendingGrid?: { cols: number; rows: number; states: Cell[] } | null;
+  /** 랜덤 문제의 크기·난이도 */
+  random?: { size: Size; level: Level };
+}
+
+interface Pick {
+  size: Size;
+  level: Level;
 }
 
 interface State {
   game: Game;
+  /** 랜덤 문제에서 고른 크기·난이도 */
+  pick: Pick;
   history: Game[];
   cursor: number | null;
   tool: Tool;
@@ -62,22 +72,35 @@ type Action =
   | { type: 'edit' }
   | { type: 'new' }
   | { type: 'dismiss' }
-  | { type: 'photo'; result: PhotoResult };
+  | { type: 'photo'; result: PhotoResult }
+  | { type: 'pick'; pick: Partial<Pick> }
+  | { type: 'random'; result: Generated };
 
 const STORAGE_KEY = 'nonogram-helper:v1';
 
 const EXAMPLE = ['..##..##..', '.####.####', '##########', '##########', '.########.', '..######..', '...####...', '....##....'];
 
+const SIZE_NOTE: Record<Size, string> = {
+  5: '5×5: 처음 해 보거나 잠깐 풀기 좋아요',
+  10: '10×10: 가볍게 한 판',
+  15: '15×15: 조금 길게 한 판',
+  20: '20×20: 오래 붙잡고 푸는 판',
+};
+
 const emptyGame = (): Game => ({ phase: 'setup', rowsText: '', colsText: '', puzzle: null, grid: [], solution: null });
 
+const DEFAULT_PICK: Pick = { size: 10, level: 'easy' };
+
 function loadState(): State {
-  const base: State = { game: emptyGame(), history: [], cursor: null, tool: 'fill', hint: null, hintLevel: 0, message: null };
+  const base: State = { game: emptyGame(), pick: DEFAULT_PICK, history: [], cursor: null, tool: 'fill', hint: null, hintLevel: 0, message: null };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return base;
-    const saved = JSON.parse(raw) as { game: Game };
-    if (!saved.game || typeof saved.game.rowsText !== 'string') return base;
-    return { ...base, game: saved.game };
+    const saved = JSON.parse(raw) as { game: Game; pick?: Pick };
+    const pick =
+      saved.pick && SIZES.includes(saved.pick.size) && LEVELS.some((l) => l.id === saved.pick!.level) ? saved.pick : DEFAULT_PICK;
+    if (!saved.game || typeof saved.game.rowsText !== 'string') return { ...base, pick };
+    return { ...base, game: saved.game, pick };
   } catch {
     return base;
   }
@@ -191,11 +214,29 @@ function reducer(state: State, action: Action): State {
     case 'hintClose':
       return { ...state, hint: null, hintLevel: 0 };
     case 'edit':
-      return commit(state, { ...game, phase: 'setup', puzzle: null, grid: [], solution: null });
+      return commit(state, { ...game, phase: 'setup', puzzle: null, grid: [], solution: null, random: undefined });
     case 'new':
       return { ...commit(state, emptyGame()), cursor: null };
     case 'dismiss':
       return { ...state, message: null };
+    case 'pick':
+      return { ...state, pick: { ...state.pick, ...action.pick } };
+    case 'random': {
+      const { puzzle, solution, size, level, approximate } = action.result;
+      const next: Game = {
+        phase: 'solve',
+        rowsText: puzzle.rows.map(formatClue).join('\n'),
+        colsText: puzzle.cols.map(formatClue).join('\n'),
+        puzzle,
+        grid: new Array<Cell>(solution.length).fill(UNKNOWN),
+        solution,
+        pendingGrid: null,
+        random: { size, level },
+      };
+      const s = { ...commit(state, next), cursor: 0 };
+      if (!approximate) return s;
+      return { ...s, message: { tone: 'info', text: `${levelLabel(level)} 난이도 문제를 시간 안에 찾지 못해 가장 가까운 난이도의 문제를 냈어요.` } };
+    }
     case 'photo': {
       const { result } = action;
       const parts: string[] = [];
@@ -235,11 +276,24 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ game }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ game, pick: state.pick }));
     } catch {
       /* 저장할 수 없는 환경이면 그냥 넘어간다 */
     }
-  }, [game]);
+  }, [game, state.pick]);
+
+  const [generating, setGenerating] = useState(false);
+  const startRandom = (size: Size, level: Level) => {
+    setGenerating(true);
+    // 큰 판은 수십 ms 걸릴 수 있어 '만드는 중'을 먼저 그린 뒤 만든다
+    setTimeout(() => {
+      try {
+        dispatch({ type: 'random', result: generate(size, level) });
+      } finally {
+        setGenerating(false);
+      }
+    }, 30);
+  };
 
   const solved = useMemo(() => {
     if (!puzzle || game.phase !== 'solve') return false;
@@ -299,7 +353,9 @@ export default function App() {
       <UpdateBanner />
       <header className="app-header">
         <h1>노노그램 도우미</h1>
-        <span className="phase-badge">{isSetup ? '문제 입력' : '푸는 중'}</span>
+        <span className="phase-badge">
+          {isSetup ? '문제 입력' : game.random ? `푸는 중 · ${game.random.size}×${game.random.size} ${levelLabel(game.random.level)}` : '푸는 중'}
+        </span>
       </header>
 
       {message && (
@@ -313,6 +369,45 @@ export default function App() {
 
       {isSetup && (
         <>
+          <section className="random" aria-label="랜덤 문제">
+            <span className="random-title">랜덤 문제</span>
+            <div className="random-row" role="radiogroup" aria-label="판 크기">
+              <span className="random-label">크기</span>
+              {SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  role="radio"
+                  aria-checked={state.pick.size === size}
+                  className={state.pick.size === size ? 'on' : ''}
+                  onClick={() => dispatch({ type: 'pick', pick: { size } })}
+                >
+                  {size}×{size}
+                </button>
+              ))}
+            </div>
+            <div className="random-row" role="radiogroup" aria-label="난이도">
+              <span className="random-label">난이도</span>
+              {LEVELS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={state.pick.level === l.id}
+                  className={state.pick.level === l.id ? 'on' : ''}
+                  onClick={() => dispatch({ type: 'pick', pick: { level: l.id } })}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            <p className="random-desc">
+              {SIZE_NOTE[state.pick.size]} · {LEVELS.find((l) => l.id === state.pick.level)!.desc}. 모든 문제는 답이 하나이고 줄 추론만으로 풀려요.
+            </p>
+            <button type="button" className="primary random-go" onClick={() => startRandom(state.pick.size, state.pick.level)} disabled={generating}>
+              {generating ? '만드는 중…' : '랜덤 문제 풀기'}
+            </button>
+          </section>
           <p className="lead">
             단서를 한 줄에 하나씩 적으세요. 숫자는 띄어 쓰고, 칠할 칸이 없는 줄은 <strong>0</strong>으로 적어요. 줄 수가 판의 크기가 돼요.
           </p>
@@ -416,6 +511,11 @@ export default function App() {
             <button type="button" className="link" onClick={() => dispatch({ type: 'new' })}>
               새 문제
             </button>
+            {game.random && (
+              <button type="button" className="link" onClick={() => startRandom(game.random!.size, game.random!.level)} disabled={generating}>
+                {generating ? '만드는 중…' : '같은 조건으로 한 문제 더'}
+              </button>
+            )}
           </div>
 
           <p className="keys">

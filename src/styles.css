@@ -390,6 +390,77 @@ a.app-nav-item:hover {
   color: var(--text);
 }
 
+/* ---------- 랜덤 문제 ---------- */
+
+.random {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.random-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.random-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.random-label {
+  width: 3.4em;
+  flex: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.random-row button {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 7px 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.random-row button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.random-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.random-go {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.random-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ---------- 단서 입력 ---------- */
 
 .clue-inputs {
