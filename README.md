@@ -2,7 +2,7 @@
 
 노노그램 단서를 입력하면 다음 한 단계를 힌트로 알려주는 PWA. 브라우저에서 쓰거나 휴대폰 홈 화면에 앱으로 설치할 수 있고, 설치 후에는 오프라인에서도 동작한다.
 
-**사용하기**: https://itjeong-dev.github.io/NonogramHelper/ · 함께 쓰는 앱: [스도쿠 도우미](https://itjeong-dev.github.io/SudokuHelper/)
+**사용하기**: https://itjeong-dev.github.io/NonogramHelper/ · 함께 쓰는 앱: [스도쿠 도우미](https://itjeong-dev.github.io/SudokuHelper/) · [가쿠로 도우미](https://itjeong-dev.github.io/KakuroHelper/)
 
 ## 기능
 
@@ -63,6 +63,7 @@ main에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 테스트·
 - `src/photo/image.ts`: 판 모서리·칸 수 찾기, 칸 상태(칠함·X) 판단, 단서 숫자 위치 찾기
 - `src/photo/digits.ts`: 기기 글꼴로 만든 0~9 견본과 비교해 단서 숫자 읽기
 - `src/photo/recognize.ts`: 사진 읽기 흐름
-- `src/components/AppNav.tsx`: 스도쿠·노노그램 도우미 이동 메뉴 (SudokuHelper에도 같은 파일)
-- `src/components/UpdateBanner.tsx`: 새 버전 새로고침 안내 (두 앱에 같은 파일)
+- `src/components/AppNav.tsx`: 퍼즐 도우미 앱 모음. 제목 줄 버튼으로 여는 시트 (스도쿠·노노그램·가쿠로 도우미에 같은 파일)
+- `src/components/UpdateBanner.tsx`: 새 버전 새로고침 안내 (세 앱에 같은 파일)
+- `src/components/SolvedToast.tsx`: 다 풀었을 때 판 위 안내 (세 앱에 같은 파일)
 - `src/App.tsx`, `src/components/`: 화면

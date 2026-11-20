@@ -360,13 +360,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <AppNav current="nonogram" />
       <UpdateBanner />
       <header className="app-header">
         <h1>노노그램 도우미</h1>
         <span className="phase-badge">
           {isSetup ? '문제 입력' : game.random ? `푸는 중 · ${game.random.size}×${game.random.size} ${levelLabel(game.random.level)}` : '푸는 중'}
         </span>
+        <AppNav current="nonogram" />
       </header>
 
       {message && (
