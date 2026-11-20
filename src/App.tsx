@@ -420,7 +420,7 @@ export default function App() {
             </button>
           </section>
           <p className="lead">
-            단서를 한 줄에 하나씩 적으세요. 숫자는 띄어 쓰고, 칠할 칸이 없는 줄은 <strong>0</strong>으로 적어요. 줄 수가 판의 크기가 돼요.
+            단서를 한 줄에 하나씩 적으세요. 단서끼리는 띄어 쓰고, 칠할 칸이 없으면 <strong>0</strong>으로 입력해요.
           </p>
           <div className="clue-inputs">
             <label>
