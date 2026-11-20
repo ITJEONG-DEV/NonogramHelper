@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Cell, EMPTY, FILLED, UNKNOWN, lineDeductions, lineSatisfied, solveLine } from './line';
+import { type Cell, EMPTY, FILLED, UNKNOWN, doneClues, lineDeductions, lineSatisfied, solveLine } from './line';
 import { type Puzzle, cluesFromSolution, parseClues, solve, validatePuzzle } from './puzzle';
 import { applyHint, findHint } from './hints';
 
@@ -182,5 +182,29 @@ describe('hints', () => {
     const p = cluesFromSolution(TRICKY);
     const { grid, solution } = runToEnd(p);
     expect(grid).toEqual(solution);
+  });
+});
+
+describe('단서 숫자 완료 표시', () => {
+  const line = (s: string) => [...s].map((ch) => (ch === '#' ? F : ch === 'x' ? E : U)) as Cell[];
+
+  it('1 12에서 12를 다 칠하고 양쪽이 끝·X로 막히면 12만 완료', () => {
+    expect(doneClues([1, 12], line('...x############'))).toEqual([false, true]);
+    expect(doneClues([1, 12], line('..x############x'))).toEqual([false, true]);
+  });
+
+  it('한쪽이 열려 있으면 완료가 아님', () => {
+    expect(doneClues([1, 12], line('...############.'))).toEqual([false, false]);
+  });
+
+  it('같은 길이 숫자 중 어느 것인지 모르면 완료가 아님', () => {
+    // 1 1 1에서 중간의 1칸: 첫째인지 둘째인지 정해지지 않는다
+    expect(doneClues([1, 1, 1], line('..x#x....'))).toEqual([false, false, false]);
+    // 맨 앞 1칸은 첫 번째 1
+    expect(doneClues([1, 1, 1], line('#x.......'))).toEqual([true, false, false]);
+  });
+
+  it('단서와 맞지 않는 줄은 표시하지 않음', () => {
+    expect(doneClues([2], line('#x#'))).toEqual([false]);
   });
 });

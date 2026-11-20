@@ -564,6 +564,13 @@ a.app-nav-item:hover {
   opacity: 0.45;
 }
 
+/* 줄 전체가 끝나기 전, 위치가 확실한 숫자만 흐리게 */
+.nono-col-clue:not(.done) span.done,
+.nono-row-clue:not(.done) span.done {
+  color: var(--muted);
+  opacity: 0.45;
+}
+
 .nono-col-clue.cursor-line,
 .nono-row-clue.cursor-line {
   background: var(--peer);

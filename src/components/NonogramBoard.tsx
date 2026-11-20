@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { type Cell, EMPTY, FILLED, UNKNOWN, lineSatisfied } from '../nonogram/line';
+import { type Cell, EMPTY, FILLED, UNKNOWN, doneClues, lineSatisfied } from '../nonogram/line';
 import { type LineRef, type Puzzle, lineIndices } from '../nonogram/puzzle';
 import type { Hint } from '../nonogram/hints';
 
@@ -47,8 +47,13 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
 
   const focus = new Set(hint && hintLevel >= 1 && hint.line ? lineIndices(puzzle, hint.line) : []);
   const preview = new Map<number, Cell>(hint && hintLevel >= 3 ? hint.changes.map((c) => [c.cell, c.value]) : []);
-  const rowDone = puzzle.rows.map((clue, r) => lineSatisfied(clue, grid.slice(r * w, r * w + w)));
-  const colDone = puzzle.cols.map((clue, c) => lineSatisfied(clue, Array.from({ length: h }, (_, r) => grid[r * w + c])));
+  const rowCells = puzzle.rows.map((_, r) => grid.slice(r * w, r * w + w));
+  const colCells = puzzle.cols.map((_, c) => Array.from({ length: h }, (_, r) => grid[r * w + c]));
+  const rowDone = puzzle.rows.map((clue, r) => lineSatisfied(clue, rowCells[r]));
+  const colDone = puzzle.cols.map((clue, c) => lineSatisfied(clue, colCells[c]));
+  /** 단서 숫자 하나씩: 위치가 확실한 칠한 덩어리를 다 칠한 숫자 */
+  const rowNumDone = puzzle.rows.map((clue, r) => doneClues(clue, rowCells[r]));
+  const colNumDone = puzzle.cols.map((clue, c) => doneClues(clue, colCells[c]));
   const focusRow = hint && hintLevel >= 1 && hint.line?.kind === 'row' ? hint.line.index : -1;
   const focusCol = hint && hintLevel >= 1 && hint.line?.kind === 'col' ? hint.line.index : -1;
   const curR = cursor !== null ? Math.floor(cursor / w) : -1;
@@ -132,7 +137,9 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
             onClick={() => onClue({ kind: 'col', index: c })}
           >
             {(clue.length ? clue : [0]).map((n, k) => (
-              <span key={k}>{n}</span>
+              <span key={k} className={colNumDone[c][k] ? 'done' : undefined}>
+                {n}
+              </span>
             ))}
           </div>
         ))}
@@ -145,7 +152,9 @@ export function NonogramBoard({ puzzle, grid, cursor, tool, hint, hintLevel, onP
               onClick={() => onClue({ kind: 'row', index: r })}
             >
               {(clue.length ? clue : [0]).map((n, k) => (
-                <span key={k}>{n}</span>
+                <span key={k} className={rowNumDone[r][k] ? 'done' : undefined}>
+                  {n}
+                </span>
               ))}
             </div>
             {Array.from({ length: w }, (_, c) => {

@@ -19,7 +19,7 @@ export interface LineResult {
  * pre[i][j]: 앞쪽 i칸에 블록 0..j-1을 다 놓을 수 있음 (마지막 블록 뒤 한 칸은 비움까지 포함)
  * suf[i][j]: i칸부터 끝까지 블록 j..k-1을 놓을 수 있음
  */
-export function solveLine(clue: number[], cells: Cell[]): LineResult {
+function tables(clue: number[], cells: Cell[]) {
   const n = cells.length;
   const blocks = clue.filter((b) => b > 0);
   const k = blocks.length;
@@ -54,7 +54,11 @@ export function solveLine(clue: number[], cells: Cell[]): LineResult {
       suf[i][j] = v;
     }
   }
+  return { n, blocks, k, fits, pre, suf };
+}
 
+export function solveLine(clue: number[], cells: Cell[]): LineResult {
+  const { n, blocks, k, fits, pre, suf } = tables(clue, cells);
   const canFill = new Array<boolean>(n).fill(false);
   const canEmpty = new Array<boolean>(n).fill(false);
   if (!pre[n][k]) return { ok: false, canFill, canEmpty };
@@ -81,6 +85,37 @@ export function solveLine(clue: number[], cells: Cell[]): LineResult {
     }
   }
   return { ok: true, canFill, canEmpty };
+}
+
+/**
+ * 단서 숫자마다 완료 여부. 양쪽이 줄 끝이나 X로 막힌 칠한 덩어리가
+ * 단서에 맞는 모든 배치에서 같은 단서 숫자일 때 그 숫자를 완료로 본다.
+ * 반환 배열은 clue와 같은 순서다.
+ */
+export function doneClues(clue: number[], cells: Cell[]): boolean[] {
+  const done = clue.map(() => false);
+  const { n, blocks, k, pre, suf } = tables(clue, cells);
+  if (!pre[n][k]) return done;
+  // blocks 번호 → clue 번호 (0인 단서는 건너뛴다)
+  const toClue = clue.flatMap((b, idx) => (b > 0 ? [idx] : []));
+  let i = 0;
+  while (i < n) {
+    if (cells[i] !== FILLED) {
+      i++;
+      continue;
+    }
+    const s = i;
+    while (i < n && cells[i] === FILLED) i++;
+    const e = i;
+    if ((s > 0 && cells[s - 1] !== EMPTY) || (e < n && cells[e] !== EMPTY)) continue;
+    const which: number[] = [];
+    for (let j = 0; j < k; j++) {
+      if (blocks[j] !== e - s || !pre[s][j]) continue;
+      if (e === n ? suf[n][j + 1] : suf[e + 1][j + 1]) which.push(j);
+    }
+    if (which.length === 1) done[toClue[which[0]]] = true;
+  }
+  return done;
 }
 
 /** 줄에서 새로 확정되는 칸. 모순이면 null */
