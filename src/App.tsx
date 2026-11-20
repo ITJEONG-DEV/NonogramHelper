@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AppNav } from './components/AppNav';
+import { SolvedToast } from './components/SolvedToast';
 import { UpdateBanner } from './components/UpdateBanner';
 import { HintPanel } from './components/HintPanel';
 import { NonogramBoard, type Tool } from './components/NonogramBoard';
@@ -466,18 +467,20 @@ export default function App() {
 
       {!isSetup && puzzle && (
         <>
-          {solved && <div className="message success">다 풀었어요! 모든 줄이 단서와 맞아요.</div>}
-          <NonogramBoard
-            puzzle={puzzle}
-            grid={game.grid}
-            cursor={state.cursor}
-            tool={tool}
-            hint={hint}
-            hintLevel={hintLevel}
-            onPaint={(cells, value, first) => dispatch({ type: 'paint', cells, value, first })}
-            onCursor={(cell) => dispatch({ type: 'cursor', cell })}
-            onClue={(line) => dispatch({ type: 'fillLine', line })}
-          />
+          <div className="board-wrap">
+            <NonogramBoard
+              puzzle={puzzle}
+              grid={game.grid}
+              cursor={state.cursor}
+              tool={tool}
+              hint={hint}
+              hintLevel={hintLevel}
+              onPaint={(cells, value, first) => dispatch({ type: 'paint', cells, value, first })}
+              onCursor={(cell) => dispatch({ type: 'cursor', cell })}
+              onClue={(line) => dispatch({ type: 'fillLine', line })}
+            />
+            <SolvedToast show={solved} text="다 풀었어요! 모든 줄이 단서와 맞아요." />
+          </div>
 
           {hint && (
             <HintPanel
