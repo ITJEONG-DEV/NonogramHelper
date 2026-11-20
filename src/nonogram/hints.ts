@@ -1,7 +1,8 @@
 import { type Cell, EMPTY, FILLED, UNKNOWN, lineDeductions, lineSatisfied } from './line';
 import { type LineRef, type Puzzle, allLines, clueOf, formatClue, lineIndices, lineName, width } from './puzzle';
+import { findProbe } from './generate';
 
-export type HintKind = 'wrong' | 'contradiction' | 'zero-line' | 'complete-line' | 'overlap' | 'line' | 'reveal';
+export type HintKind = 'wrong' | 'contradiction' | 'zero-line' | 'complete-line' | 'overlap' | 'line' | 'probe' | 'reveal';
 
 export interface CellChange {
   cell: number;
@@ -128,6 +129,28 @@ function lineHint(p: Puzzle, grid: Cell[]): Hint | null {
   };
 }
 
+/** 줄 하나로 막혔을 때: 한 칸을 가정해 모순이 나는 곳을 찾는다 */
+function probeHint(p: Puzzle, grid: Cell[]): Hint | null {
+  const found = findProbe(p, grid);
+  if (!found) return null;
+  const w = width(p);
+  const { cell, value, assumed } = found;
+  const r = Math.floor(cell / w);
+  const where = `${r + 1}행 ${(cell % w) + 1}열`;
+  const assumedText = assumed === FILLED ? '칠한다' : 'X라';
+  return {
+    kind: 'probe',
+    name: '가정해 보고 모순 찾기',
+    steps: [
+      `${josaEul(`${r + 1}행`)} 보세요. 여기서부터는 줄 하나만 봐서는 더 정해지는 칸이 없어요.`,
+      `${where}을 ${assumedText}고 가정하고 가로·세로 줄 추론을 이어가 보세요. 어느 줄에서 단서와 맞지 않게 돼요.`,
+      `${where}을 ${assumedText}고 두면 모순이 생기니, 이 칸은 ${value === FILLED ? '칠하는 칸' : 'X 칸'}이에요.`,
+    ],
+    line: { kind: 'row', index: r },
+    changes: [{ cell, value }],
+  };
+}
+
 function reveal(p: Puzzle, grid: Cell[], solution: Cell[] | null): Hint | null {
   if (!solution) return null;
   const w = width(p);
@@ -154,7 +177,7 @@ export function findHint(p: Puzzle, grid: Cell[], solution: Cell[] | null): Hint
   const wrong = findWrong(p, grid, solution) ?? findContradiction(p, grid);
   if (wrong) return wrong;
   if (!grid.includes(UNKNOWN)) return null;
-  return lineHint(p, grid) ?? reveal(p, grid, solution);
+  return lineHint(p, grid) ?? probeHint(p, grid) ?? reveal(p, grid, solution);
 }
 
 export function applyHint(hint: Hint, grid: Cell[]): Cell[] {

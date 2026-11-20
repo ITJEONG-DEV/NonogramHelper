@@ -283,16 +283,28 @@ export default function App() {
   }, [game, state.pick]);
 
   const [generating, setGenerating] = useState(false);
+  const worker = useRef<Worker | null>(null);
+  useEffect(() => () => worker.current?.terminate(), []);
+
   const startRandom = (size: Size, level: Level) => {
+    worker.current?.terminate();
     setGenerating(true);
-    // 큰 판은 수십 ms 걸릴 수 있어 '만드는 중'을 먼저 그린 뒤 만든다
-    setTimeout(() => {
-      try {
-        dispatch({ type: 'random', result: generate(size, level) });
-      } finally {
-        setGenerating(false);
-      }
-    }, 30);
+    const done = (result: Generated) => {
+      worker.current?.terminate();
+      worker.current = null;
+      setGenerating(false);
+      dispatch({ type: 'random', result });
+    };
+    try {
+      const w = new Worker(new URL('./nonogram/generate.worker.ts', import.meta.url), { type: 'module' });
+      worker.current = w;
+      w.onmessage = (e: MessageEvent<Generated>) => done(e.data);
+      w.onerror = () => done(generate(size, level));
+      w.postMessage({ size, level });
+    } catch {
+      // 워커를 못 쓰는 환경이면 화면에서 바로 만든다
+      setTimeout(() => done(generate(size, level)), 30);
+    }
   };
 
   const solved = useMemo(() => {
@@ -402,7 +414,7 @@ export default function App() {
               ))}
             </div>
             <p className="random-desc">
-              {SIZE_NOTE[state.pick.size]} · {LEVELS.find((l) => l.id === state.pick.level)!.desc}. 모든 문제는 답이 하나이고 줄 추론만으로 풀려요.
+              {SIZE_NOTE[state.pick.size]} · {LEVELS.find((l) => l.id === state.pick.level)!.desc}. 모든 문제는 답이 하나예요.
             </p>
             <button type="button" className="primary random-go" onClick={() => startRandom(state.pick.size, state.pick.level)} disabled={generating}>
               {generating ? '만드는 중…' : '랜덤 문제 풀기'}

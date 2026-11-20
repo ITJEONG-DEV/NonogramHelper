@@ -1,21 +1,54 @@
 import { type Cell, EMPTY, FILLED, UNKNOWN, lineDeductions, runsOf } from './line';
-import { type Puzzle, allLines, clueOf, lineIndices } from './puzzle';
+import { type Puzzle, allLines, clueOf, lineIndices, propagate } from './puzzle';
 
 export const SIZES = [5, 10, 15, 20] as const;
 export type Size = (typeof SIZES)[number];
 
-export type Level = 'easy' | 'medium' | 'hard';
+export type Level = 'easy' | 'medium' | 'hard' | 'expert';
 
 /**
- * 난이도는 빈 판에서 줄 하나씩 겹치기로 바로 정해지는 칸의 비율로 나눈다.
- * 많이 정해질수록 실마리가 많아 쉽고, 적을수록 칸을 조금씩 정하며 가로·세로를 오가야 한다.
- * 어느 난이도든 줄 추론만으로 끝까지 풀리는 문제만 낸다(답이 하나이고 찍을 필요가 없다).
+ * 쉬움·보통·어려움은 줄 추론만으로 끝까지 풀리는 문제이고, 빈 판에서 줄 하나씩 겹치기로
+ * 바로 정해지는 칸의 비율로 나눈다. 많이 정해질수록 실마리가 많아 쉽다.
+ * 최상은 줄 추론으로는 막히고, 한 칸을 가정해 줄 추론을 이어가다 모순을 찾아야 풀리는 문제다.
+ * 어느 난이도든 모든 칸이 논리로 정해지므로 답은 하나다.
  */
-export const LEVELS: { id: Level; label: string; desc: string; density: number; minOpen: number; maxOpen: number }[] = [
-  { id: 'easy', label: '쉬움', desc: '처음부터 정해지는 칸이 많아요', density: 0.65, minOpen: 0.6, maxOpen: 1 },
-  { id: 'medium', label: '보통', desc: '가로·세로를 몇 번 오가야 해요', density: 0.55, minOpen: 0.3, maxOpen: 0.6 },
-  { id: 'hard', label: '어려움', desc: '처음 실마리가 적고 오래 오가야 해요', density: 0.45, minOpen: 0, maxOpen: 0.3 },
+export const LEVELS: { id: Level; label: string; desc: string; density: number; minOpen: number; maxOpen: number; probe: boolean }[] = [
+  { id: 'easy', label: '쉬움', desc: '처음부터 정해지는 칸이 많아요', density: 0.65, minOpen: 0.6, maxOpen: 1, probe: false },
+  { id: 'medium', label: '보통', desc: '가로·세로를 몇 번 오가야 해요', density: 0.55, minOpen: 0.3, maxOpen: 0.6, probe: false },
+  { id: 'hard', label: '어려움', desc: '처음 실마리가 적고 오래 오가야 해요', density: 0.45, minOpen: 0, maxOpen: 0.3, probe: false },
+  { id: 'expert', label: '최상', desc: '줄 하나로는 막혀서 칸을 가정해 보고 모순을 찾아야 해요', density: 0.5, minOpen: 0, maxOpen: 1, probe: true },
 ];
+
+/**
+ * 줄 하나로 더 정해지지 않을 때 쓰는 한 단계 가정:
+ * 모르는 칸을 칠한다(또는 X)고 가정하고 줄 추론을 이어가 모순이 나면 반대가 답이다.
+ * 확정되는 칸을 하나 찾으면 그 칸과 값, 가정한 값을 돌려준다.
+ */
+export function findProbe(p: Puzzle, grid: Cell[]): { cell: number; value: Cell; assumed: Cell } | null {
+  for (let cell = 0; cell < grid.length; cell++) {
+    if (grid[cell] !== UNKNOWN) continue;
+    for (const assumed of [FILLED, EMPTY] as const) {
+      const g = grid.slice();
+      g[cell] = assumed;
+      if (!propagate(p, g, cell)) return { cell, value: assumed === FILLED ? EMPTY : FILLED, assumed };
+    }
+  }
+  return null;
+}
+
+/** 줄 추론과 한 단계 가정을 번갈아 써서 끝까지 풀어 본다. 풀리면 정답 판, 막히면 null */
+export function solveWithProbing(p: Puzzle): { grid: Cell[]; probes: number } | null {
+  let g = propagate(p, new Array<Cell>(p.rows.length * p.cols.length).fill(UNKNOWN));
+  let probes = 0;
+  while (g && g.includes(UNKNOWN)) {
+    const found = findProbe(p, g);
+    if (!found) return null;
+    probes++;
+    g[found.cell] = found.value;
+    g = propagate(p, g, found.cell);
+  }
+  return g ? { grid: g, probes } : null;
+}
 
 export const levelLabel = (level: Level) => LEVELS.find((l) => l.id === level)!.label;
 
@@ -109,7 +142,11 @@ export function generate(size: Size, level: Level, rnd: Random = Math.random, bu
     if (!solution.includes(FILLED)) continue;
     const puzzle = cluesOf(solution, size, size);
     const r = rate(puzzle);
-    if (r.solved) {
+    if (spec.probe) {
+      // 줄 추론으로 막히고, 한 단계 가정으로는 끝까지 풀리는 문제만 쓴다
+      if (!r.solved && solveWithProbing(puzzle)) return { puzzle, solution, size, level, approximate: false };
+      if (r.solved && !best) best = { puzzle, solution, gap: 1 };
+    } else if (r.solved) {
       if (r.open >= spec.minOpen && r.open < spec.maxOpen) return { puzzle, solution, size, level, approximate: false };
       const gap = r.open < spec.minOpen ? spec.minOpen - r.open : r.open - spec.maxOpen;
       if (!best || gap < best.gap) best = { puzzle, solution, gap };

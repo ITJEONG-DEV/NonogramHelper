@@ -63,13 +63,17 @@ export function validatePuzzle(p: Puzzle): string | null {
   return null;
 }
 
-/** 줄 단위 추론을 더 나올 게 없을 때까지 반복한다. 모순이면 null */
-export function propagate(p: Puzzle, grid: Cell[]): Cell[] | null {
+/**
+ * 줄 단위 추론을 더 나올 게 없을 때까지 반복한다. 모순이면 null.
+ * changed를 주면 그 칸이 지나는 행·열부터 본다(나머지 줄은 이미 더 나올 게 없는 판일 때).
+ */
+export function propagate(p: Puzzle, grid: Cell[], changed?: number): Cell[] | null {
   const g = grid.slice();
   const lines = allLines(p);
-  const queued = new Set(lines.map((_, i) => i));
-  const queue = lines.map((_, i) => i);
   const w = width(p);
+  const start = changed === undefined ? lines.map((_, i) => i) : [Math.floor(changed / w), p.rows.length + (changed % w)];
+  const queued = new Set(start);
+  const queue = start.slice();
   while (queue.length) {
     const li = queue.shift()!;
     queued.delete(li);

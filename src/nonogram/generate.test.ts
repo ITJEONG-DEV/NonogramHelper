@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, SIZES, cluesOf, generate, rate } from './generate';
+import { LEVELS, SIZES, cluesOf, generate, rate, solveWithProbing } from './generate';
+import { applyHint, findHint } from './hints';
+import { type Cell, UNKNOWN } from './line';
 import { solve, validatePuzzle } from './puzzle';
 
 /** 매번 같은 결과가 나오는 난수 */
@@ -28,10 +30,31 @@ describe('랜덤 문제', () => {
         expect(res.count).toBe(1);
         expect(res.solution).toEqual(r.solution);
         const rating = rate(r.puzzle);
+        if (spec.probe) {
+          // 최상: 줄 추론으로는 막히고, 한 단계 가정으로 정답까지 간다
+          expect(rating.solved).toBe(false);
+          expect(solveWithProbing(r.puzzle)?.grid).toEqual(r.solution);
+          return;
+        }
         expect(rating.solved).toBe(true);
         expect(rating.open).toBeGreaterThanOrEqual(spec.minOpen);
         expect(rating.open).toBeLessThan(spec.maxOpen);
       });
     }
   }
+
+  it('최상 문제는 힌트만 따라가도 정답까지 가고, 칸 공개 없이 가정 힌트로 푼다', () => {
+    const r = generate(10, 'expert', seeded(77), 20000);
+    let grid: Cell[] = new Array<Cell>(100).fill(UNKNOWN);
+    const kinds = new Set<string>();
+    for (let i = 0; i < 500; i++) {
+      const h = findHint(r.puzzle, grid, r.solution);
+      if (!h) break;
+      kinds.add(h.kind);
+      grid = applyHint(h, grid);
+    }
+    expect(grid).toEqual(r.solution);
+    expect(kinds.has('probe')).toBe(true);
+    expect(kinds.has('reveal')).toBe(false);
+  });
 });
