@@ -40,7 +40,7 @@
 | Backspace, Delete | 지우기 |
 | T | 칠하기/X 도구 전환 |
 | H | 힌트 |
-| Ctrl+Z | 되돌리기 |
+| Ctrl+Z | 실행 취소 |
 
 ## 개발
 

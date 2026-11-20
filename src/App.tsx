@@ -246,7 +246,7 @@ function reducer(state: State, action: Action): State {
         : '';
       if (game.phase === 'solve') {
         if (!st) return state;
-        return { ...commit(state, { ...game, grid: st.states }), message: { tone: 'info', text: `${stateText} 사진과 비교해 보세요. 되돌리기로 읽기 전 판으로 돌아갈 수 있어요.` } };
+        return { ...commit(state, { ...game, grid: st.states }), message: { tone: 'info', text: `${stateText} 사진과 비교해 보세요. 실행 취소로 읽기 전 판으로 돌아갈 수 있어요.` } };
       }
       let next: Game = { ...game };
       if (result.clues) {
@@ -503,7 +503,7 @@ export default function App() {
 
           <div className="toolbar">
             <button type="button" onClick={() => dispatch({ type: 'undo' })} disabled={!state.history.length}>
-              되돌리기
+              실행 취소
             </button>
             <button type="button" onClick={() => dispatch({ type: 'clearGrid' })} disabled={!game.grid.some((v) => v !== UNKNOWN)}>
               판 비우기
@@ -531,7 +531,7 @@ export default function App() {
           </div>
 
           <p className="keys">
-            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 다 칠한 줄의 단서를 누르면 남은 칸이 X로 채워져요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 되돌리기
+            칸을 누르거나 끌어서 여러 칸을 한 번에 칠해요. Shift를 누른 채 끌면 가로나 세로 직선으로만 칠해요. 다 칠한 줄의 단서를 누르면 남은 칸이 X로 채워져요. 키보드: 방향키·Tab 이동 · Space/F 칠하기 · X 표시 · Backspace 지우기 · T 도구 전환 · H 힌트 · Ctrl+Z 실행 취소
           </p>
         </>
       )}
