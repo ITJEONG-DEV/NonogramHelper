@@ -183,10 +183,8 @@ function reducer(state: State, action: Action): State {
       if (game.phase !== 'solve' || !game.puzzle) return state;
       const idx = lineIndices(game.puzzle, action.line);
       const cells = idx.map((i) => game.grid[i]);
-      const name = lineName(action.line);
-      if (!lineSatisfied(clueOf(game.puzzle, action.line), cells)) {
-        return { ...state, message: { tone: 'info', text: `${name}은 아직 단서만큼 칠하지 않았어요. 다 칠한 뒤에 누르면 남은 칸을 X로 채워요.` } };
-      }
+      // 아직 다 칠하지 않은 줄의 단서를 누르면 아무 일도 하지 않는다
+      if (!lineSatisfied(clueOf(game.puzzle, action.line), cells)) return state;
       if (!cells.includes(UNKNOWN)) return state;
       const grid = game.grid.slice();
       for (const i of idx) if (grid[i] === UNKNOWN) grid[i] = EMPTY;
