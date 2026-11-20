@@ -5,6 +5,8 @@
   --muted: #667089;
   --line: #c9cfdc;
   --line-strong: #1c2233;
+  /* 노노그램 5칸 굵은 선: 칠한 칸(글자색)과 구분되는 색 */
+  --guide: #2f5bd3;
   --accent: #2f5bd3;
   --accent-soft: #dfe7fb;
   --peer: #eef1f8;
@@ -30,6 +32,7 @@
     --muted: #98a1b8;
     --line: #394057;
     --line-strong: #c2c9db;
+    --guide: #7c9cff;
     --accent: #7c9cff;
     --accent-soft: #263257;
     --peer: #222839;
@@ -517,8 +520,8 @@ a.app-nav-item:hover {
 }
 
 .nono-corner {
-  border-right: 2px solid var(--line-strong);
-  border-bottom: 2px solid var(--line-strong);
+  border-right: 2px solid var(--guide);
+  border-bottom: 2px solid var(--guide);
 }
 
 .nono-col-clue {
@@ -528,7 +531,7 @@ a.app-nav-item:hover {
   align-items: center;
   gap: 2px;
   padding: 4px 0;
-  border-bottom: 2px solid var(--line-strong);
+  border-bottom: 2px solid var(--guide);
   border-right: 1px solid var(--line);
   font-weight: 600;
 }
@@ -539,18 +542,18 @@ a.app-nav-item:hover {
   align-items: center;
   gap: 0.5em;
   padding: 0 6px;
-  border-right: 2px solid var(--line-strong);
+  border-right: 2px solid var(--guide);
   border-bottom: 1px solid var(--line);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .nono-col-clue.edge-r {
-  border-right: 2px solid var(--line-strong);
+  border-right: 2px solid var(--guide);
 }
 
 .nono-row-clue.edge-b {
-  border-bottom: 2px solid var(--line-strong);
+  border-bottom: 2px solid var(--guide);
 }
 
 .nono-col-clue,
@@ -591,11 +594,11 @@ a.app-nav-item:hover {
 }
 
 .nono-cell.edge-r {
-  border-right: 2px solid var(--line-strong);
+  border-right: 2px solid var(--guide);
 }
 
 .nono-cell.edge-b {
-  border-bottom: 2px solid var(--line-strong);
+  border-bottom: 2px solid var(--guide);
 }
 
 .nono-cell.focus {
